@@ -7799,7 +7799,7 @@ func (wc *WaitConfig) Validate() error {
 	return nil
 }
 
-// AllocState records a single event that changes the state of the whole allocation
+// AllocStateField records a single event that changes the state of the whole allocation
 type AllocStateField uint8
 
 const (

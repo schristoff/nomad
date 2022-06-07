@@ -29,7 +29,9 @@ allocations/
 	 |--> network_status -> networkStatusEntry{*structs.AllocNetworkStatus}
    |--> task-<name>/
       |--> local_state -> *trstate.LocalState # Local-only state
-      |--> task_state  -> *structs.TaskState  # Sync'd to servers
+      |--> task_state  -> *structs.TaskState  # Syncs to servers
+   |--> checks/
+      |--> check-<id> -> *structs.CheckState # Syncs to servers
 
 devicemanager/
 |--> plugin_state -> *dmstate.PluginState
