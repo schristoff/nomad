@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/nomad/client/dynamicplugins"
 	driverstate "github.com/hashicorp/nomad/client/pluginmanager/drivermanager/state"
 	"github.com/hashicorp/nomad/nomad/structs"
+	"gophers.dev/pkgs/netlog"
 )
 
 // MemDB implements a StateDB that stores data in memory and should only be
@@ -74,6 +75,8 @@ func (m *MemDB) GetAllAllocations() ([]*structs.Allocation, map[string]error, er
 }
 
 func (m *MemDB) PutAllocation(alloc *structs.Allocation, opts ...WriteOption) error {
+	netlog.Yellow("PutAllocation: %s, %s", alloc.ID, alloc.Name)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.allocs[alloc.ID] = alloc
@@ -129,6 +132,8 @@ func (m *MemDB) GetTaskRunnerState(allocID string, taskName string) (*state.Loca
 }
 
 func (m *MemDB) PutTaskRunnerLocalState(allocID string, taskName string, val *state.LocalState) error {
+	netlog.Yellow("PutTaskRunnerLocalState allocID: %s, taskName: %s, hooks: %d", allocID, taskName, len(val.Hooks))
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -145,6 +150,8 @@ func (m *MemDB) PutTaskRunnerLocalState(allocID string, taskName string, val *st
 }
 
 func (m *MemDB) PutTaskState(allocID string, taskName string, state *structs.TaskState) error {
+	netlog.Yellow("PutTaskState allocID: %s, taskName: %s, events: %d", allocID, taskName, len(state.Events))
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -161,6 +168,8 @@ func (m *MemDB) PutTaskState(allocID string, taskName string, state *structs.Tas
 }
 
 func (m *MemDB) DeleteTaskBucket(allocID, taskName string) error {
+	netlog.Yellow("DeleteTaskBucket allocID: %s, taskName: %s", allocID, taskName)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -176,6 +185,8 @@ func (m *MemDB) DeleteTaskBucket(allocID, taskName string) error {
 }
 
 func (m *MemDB) DeleteAllocationBucket(allocID string, opts ...WriteOption) error {
+	netlog.Yellow("DeleteAllocationBucket: allocID: %s", allocID)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

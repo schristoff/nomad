@@ -41,6 +41,7 @@ type allocRunner struct {
 	// Logger is the logger for the alloc runner.
 	logger log.Logger
 
+	// clientConfig is the client configuration block.
 	clientConfig *config.Config
 
 	// stateUpdater is used to emit updated alloc state

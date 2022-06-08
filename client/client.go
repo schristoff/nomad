@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/nomad/client/pluginmanager/drivermanager"
 	"github.com/hashicorp/nomad/client/servers"
 	"github.com/hashicorp/nomad/client/serviceregistration"
+	"github.com/hashicorp/nomad/client/serviceregistration/checks"
 	"github.com/hashicorp/nomad/client/serviceregistration/nsd"
 	"github.com/hashicorp/nomad/client/serviceregistration/wrapper"
 	"github.com/hashicorp/nomad/client/state"
@@ -166,7 +167,7 @@ type AllocRunner interface {
 }
 
 // Client is used to implement the client interaction with Nomad. Clients
-// are expected to register as a schedulable node to the servers, and to
+// are expected to register as a schedule-able node to the servers, and to
 // run allocations as determined by the servers.
 type Client struct {
 	config *config.Config
@@ -236,6 +237,10 @@ type Client struct {
 	// nomadService is the Nomad handler implementation for managing service
 	// registrations.
 	nomadService serviceregistration.Handler
+
+	// checker is used to query heath and readiness checks described in Nomad
+	// service registrations.
+	checker checks.Checker
 
 	// serviceRegWrapper wraps the consulService and nomadService
 	// implementations so that the alloc and task runner service hooks can call
@@ -383,6 +388,7 @@ func NewClient(cfg *config.Config, consulCatalog consul.CatalogAPI, consulProxie
 		serversContactedOnce: sync.Once{},
 		cpusetManager:        cgutil.CreateCPUSetManager(cfg.CgroupParent, logger),
 		getter:               getter.NewGetter(cfg.Artifact),
+		checker:              checks.New(logger),
 		EnterpriseClient:     newEnterpriseClient(logger),
 	}
 
