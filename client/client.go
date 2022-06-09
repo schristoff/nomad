@@ -238,9 +238,9 @@ type Client struct {
 	// registrations.
 	nomadService serviceregistration.Handler
 
-	// checker is used to query heath and readiness checks described in Nomad
-	// service registrations.
-	checker checks.Checker
+	// checkStore is used to store group and task checks and their current pass/fail
+	// status.
+	checkStore checks.Store
 
 	// serviceRegWrapper wraps the consulService and nomadService
 	// implementations so that the alloc and task runner service hooks can call
