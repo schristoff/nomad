@@ -8,6 +8,7 @@ import (
 	dmstate "github.com/hashicorp/nomad/client/devicemanager/state"
 	"github.com/hashicorp/nomad/client/dynamicplugins"
 	driverstate "github.com/hashicorp/nomad/client/pluginmanager/drivermanager/state"
+	"github.com/hashicorp/nomad/client/serviceregistration/checks"
 	"github.com/hashicorp/nomad/nomad/structs"
 	"gophers.dev/pkgs/netlog"
 )
@@ -27,6 +28,9 @@ type MemDB struct {
 	// alloc_id -> task_name -> value
 	localTaskState map[string]map[string]*state.LocalState
 	taskState      map[string]map[string]*structs.TaskState
+
+	// alloc_id -> check_id -> result
+	checks map[string]map[checks.CheckID]*checks.QueryResult
 
 	// devicemanager -> plugin-state
 	devManagerPs *dmstate.PluginState
@@ -236,6 +240,23 @@ func (m *MemDB) PutDynamicPluginRegistryState(ps *dynamicplugins.RegistryState) 
 	defer m.mu.Unlock()
 	m.dynamicManagerPs = ps
 	return nil
+}
+
+func (m *MemDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.checks[allocID][qr.ID] = qr
+	return nil
+}
+
+func (m *MemDB) GetCheckStatuses(allocID string) (map[checks.CheckID]*checks.QueryResult, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.checks[allocID], nil
+
+	return nil, nil
 }
 
 func (m *MemDB) Close() error {

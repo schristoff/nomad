@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/nomad/client/servers"
 	"github.com/hashicorp/nomad/client/serviceregistration"
 	"github.com/hashicorp/nomad/client/serviceregistration/checks"
+	"github.com/hashicorp/nomad/client/serviceregistration/checks/checkstore"
 	"github.com/hashicorp/nomad/client/serviceregistration/nsd"
 	"github.com/hashicorp/nomad/client/serviceregistration/wrapper"
 	"github.com/hashicorp/nomad/client/state"
@@ -240,7 +241,7 @@ type Client struct {
 
 	// checkStore is used to store group and task checks and their current pass/fail
 	// status.
-	checkStore checks.Store
+	checkStore checkstore.Store
 
 	// serviceRegWrapper wraps the consulService and nomadService
 	// implementations so that the alloc and task runner service hooks can call

@@ -11,6 +11,7 @@ import (
 	dmstate "github.com/hashicorp/nomad/client/devicemanager/state"
 	"github.com/hashicorp/nomad/client/dynamicplugins"
 	driverstate "github.com/hashicorp/nomad/client/pluginmanager/drivermanager/state"
+	"github.com/hashicorp/nomad/client/serviceregistration/checks"
 	"github.com/hashicorp/nomad/helper/boltdd"
 	"github.com/hashicorp/nomad/nomad/structs"
 	"go.etcd.io/bbolt"
@@ -74,6 +75,8 @@ var (
 	// allocNetworkStatusKey is the key *structs.AllocNetworkStatus is
 	// stored under
 	allocNetworkStatusKey = []byte("network_status")
+
+	checkStatus = []byte("check_status")
 
 	// allocations -> $allocid -> task-$taskname -> the keys below
 	taskLocalStateKey = []byte("local_state")
@@ -795,4 +798,20 @@ func (s *BoltStateDB) Upgrade() error {
 // DB allows access to the underlying BoltDB for testing purposes.
 func (s *BoltStateDB) DB() *boltdd.DB {
 	return s.db
+}
+
+// PutCheckStatus puts qr into the state store.
+func (s *BoltStateDB) PutCheckStatus(allocID checks.AllocID, qr *checks.QueryResult) error {
+	return s.db.Update(func(tx *boltdd.Tx) error {
+		return nil
+	})
+}
+
+// GetCheckStatuses gets the check results associated with allocID from the state store.
+func (s *BoltStateDB) GetCheckStatuses(allocID checks.AllocID) (map[checks.CheckID]*checks.QueryResult, error) {
+	var m map[checks.CheckID]*checks.QueryResult
+	err := s.db.View(func(tx *boltdd.Tx) error {
+		return nil
+	})
+	return m, err
 }
