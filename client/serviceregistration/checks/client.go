@@ -22,7 +22,9 @@ type Query struct {
 
 // GetKind determines whether the check is readiness or healthiness.
 func GetKind(c *structs.ServiceCheck) Kind {
-	// todo: something interesting with this information
+	if c != nil && c.OnUpdate == "ignore" {
+		return Readiness
+	}
 	return Healthiness
 }
 
@@ -75,9 +77,9 @@ func (c *checker) checkTCP(q *Query) *QueryResult {
 		Result: Success,
 	}
 	if _, err := net.Dial("tcp", q.Address); err != nil {
-		c.log.Info("check is critical", "kind", q.Kind, "address", q.Address, "error", err)
+		c.log.Info("check is failing", "kind", q.Kind, "address", q.Address, "error", err)
 		status.Output = err.Error()
-		status.Result = Critical
+		status.Result = Failure
 	}
 	c.log.Trace("check is success", "kind", q.Kind, "address", q.Address)
 	return status
@@ -87,7 +89,7 @@ func (c *checker) checkHTTP(q *Query) (*QueryResult, error) {
 	status := &QueryResult{
 		Kind:   q.Kind,
 		When:   c.now(),
-		Result: Missing,
+		Result: Pending,
 	}
 
 	u := q.Address + q.Path
@@ -110,7 +112,7 @@ func (c *checker) checkHTTP(q *Query) (*QueryResult, error) {
 	if result.StatusCode < 400 {
 		status.Result = Success
 	} else {
-		status.Result = Critical
+		status.Result = Failure
 	}
 
 	return status, nil

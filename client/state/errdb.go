@@ -7,6 +7,7 @@ import (
 	dmstate "github.com/hashicorp/nomad/client/devicemanager/state"
 	"github.com/hashicorp/nomad/client/dynamicplugins"
 	driverstate "github.com/hashicorp/nomad/client/pluginmanager/drivermanager/state"
+	"github.com/hashicorp/nomad/client/serviceregistration/checks"
 	"github.com/hashicorp/nomad/nomad/structs"
 )
 
@@ -80,8 +81,6 @@ func (m *ErrDB) PutDynamicPluginRegistryState(state *dynamicplugins.RegistryStat
 	return fmt.Errorf("Error!")
 }
 
-// GetDevicePluginState stores the device manager's plugin state or returns an
-// error.
 func (m *ErrDB) GetDevicePluginState() (*dmstate.PluginState, error) {
 	return nil, fmt.Errorf("Error!")
 }
@@ -92,6 +91,14 @@ func (m *ErrDB) GetDriverPluginState() (*driverstate.PluginState, error) {
 
 func (m *ErrDB) PutDriverPluginState(ps *driverstate.PluginState) error {
 	return fmt.Errorf("Error!")
+}
+
+func (m *ErrDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
+	return fmt.Errorf("Error!")
+}
+
+func (m *ErrDB) GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error) {
+	return nil, fmt.Errorf("Error!")
 }
 
 func (m *ErrDB) Close() error {

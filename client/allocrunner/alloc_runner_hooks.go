@@ -164,6 +164,7 @@ func (ar *allocRunner) initRunnerHooks(config *clientconfig.Config) error {
 		newConsulGRPCSocketHook(hookLogger, alloc, ar.allocDir, config.ConsulConfig),
 		newConsulHTTPSocketHook(hookLogger, alloc, ar.allocDir, config.ConsulConfig),
 		newCSIHook(alloc, hookLogger, ar.csiManager, ar.rpcClient, ar, hrs, ar.clientConfig.Node.SecretID),
+		newChecksHook(hookLogger, alloc, ar.checkStore),
 	}
 
 	return nil

@@ -37,7 +37,6 @@ import (
 	"github.com/hashicorp/nomad/client/pluginmanager/drivermanager"
 	"github.com/hashicorp/nomad/client/servers"
 	"github.com/hashicorp/nomad/client/serviceregistration"
-	"github.com/hashicorp/nomad/client/serviceregistration/checks"
 	"github.com/hashicorp/nomad/client/serviceregistration/checks/checkstore"
 	"github.com/hashicorp/nomad/client/serviceregistration/nsd"
 	"github.com/hashicorp/nomad/client/serviceregistration/wrapper"
@@ -389,7 +388,6 @@ func NewClient(cfg *config.Config, consulCatalog consul.CatalogAPI, consulProxie
 		serversContactedOnce: sync.Once{},
 		cpusetManager:        cgutil.CreateCPUSetManager(cfg.CgroupParent, logger),
 		getter:               getter.NewGetter(cfg.Artifact),
-		checker:              checks.New(logger),
 		EnterpriseClient:     newEnterpriseClient(logger),
 	}
 
@@ -700,6 +698,10 @@ func (c *Client) init() error {
 			c.cpusetManager = new(cgutil.NoopCpusetManager)
 		}
 	}
+
+	// setup the check store
+	c.checkStore = checkstore.NewStore(c.logger, c.stateDB)
+
 	return nil
 }
 
@@ -1182,6 +1184,7 @@ func (c *Client) restoreState() error {
 			DriverManager:       c.drivermanager,
 			ServersContactedCh:  c.serversContactedCh,
 			ServiceRegWrapper:   c.serviceRegWrapper,
+			CheckStore:          c.checkStore,
 			RPCClient:           c,
 			Getter:              c.getter,
 		}
@@ -2520,6 +2523,7 @@ func (c *Client) addAlloc(alloc *structs.Allocation, migrateToken string) error 
 		DeviceManager:       c.devicemanager,
 		DriverManager:       c.drivermanager,
 		ServiceRegWrapper:   c.serviceRegWrapper,
+		CheckStore:          c.checkStore,
 		RPCClient:           c,
 		Getter:              c.getter,
 	}

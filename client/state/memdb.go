@@ -3,12 +3,13 @@ package state
 import (
 	"sync"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/nomad/client/allocrunner/taskrunner/state"
 	dmstate "github.com/hashicorp/nomad/client/devicemanager/state"
 	"github.com/hashicorp/nomad/client/dynamicplugins"
 	driverstate "github.com/hashicorp/nomad/client/pluginmanager/drivermanager/state"
 	"github.com/hashicorp/nomad/client/serviceregistration/checks"
+	"github.com/hashicorp/nomad/helper"
 	"github.com/hashicorp/nomad/nomad/structs"
 	"gophers.dev/pkgs/netlog"
 )
@@ -30,7 +31,7 @@ type MemDB struct {
 	taskState      map[string]map[string]*structs.TaskState
 
 	// alloc_id -> check_id -> result
-	checks map[string]map[checks.CheckID]*checks.QueryResult
+	checks map[string]map[checks.ID]*checks.QueryResult
 
 	// devicemanager -> plugin-state
 	devManagerPs *dmstate.PluginState
@@ -78,7 +79,7 @@ func (m *MemDB) GetAllAllocations() ([]*structs.Allocation, map[string]error, er
 	return allocs, map[string]error{}, nil
 }
 
-func (m *MemDB) PutAllocation(alloc *structs.Allocation, opts ...WriteOption) error {
+func (m *MemDB) PutAllocation(alloc *structs.Allocation, _ ...WriteOption) error {
 	netlog.Yellow("PutAllocation: %s, %s", alloc.ID, alloc.Name)
 
 	m.mu.Lock()
@@ -106,7 +107,7 @@ func (m *MemDB) GetNetworkStatus(allocID string) (*structs.AllocNetworkStatus, e
 	return m.networkStatus[allocID], nil
 }
 
-func (m *MemDB) PutNetworkStatus(allocID string, ns *structs.AllocNetworkStatus, opts ...WriteOption) error {
+func (m *MemDB) PutNetworkStatus(allocID string, ns *structs.AllocNetworkStatus, _ ...WriteOption) error {
 	m.mu.Lock()
 	m.networkStatus[allocID] = ns
 	defer m.mu.Unlock()
@@ -188,7 +189,7 @@ func (m *MemDB) DeleteTaskBucket(allocID, taskName string) error {
 	return nil
 }
 
-func (m *MemDB) DeleteAllocationBucket(allocID string, opts ...WriteOption) error {
+func (m *MemDB) DeleteAllocationBucket(allocID string, _ ...WriteOption) error {
 	netlog.Yellow("DeleteAllocationBucket: allocID: %s", allocID)
 
 	m.mu.Lock()
@@ -250,13 +251,11 @@ func (m *MemDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
 	return nil
 }
 
-func (m *MemDB) GetCheckStatuses(allocID string) (map[checks.CheckID]*checks.QueryResult, error) {
+func (m *MemDB) GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return m.checks[allocID], nil
-
-	return nil, nil
+	return helper.CopyMap(m.checks[allocID]), nil
 }
 
 func (m *MemDB) Close() error {

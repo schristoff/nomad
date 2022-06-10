@@ -85,10 +85,10 @@ type StateDB interface {
 	PutDynamicPluginRegistryState(state *dynamicplugins.RegistryState) error
 
 	// PutCheckStatus sets the query result for the check implied in qr.
-	PutCheckStatus(allocID checks.AllocID, qr *checks.QueryResult) error
+	PutCheckStatus(allocID string, qr *checks.QueryResult) error
 
 	// GetCheckStatuses gets the query result for the alloc.
-	GetCheckStatuses(allocID checks.AllocID) (map[checks.CheckID]*checks.QueryResult, error)
+	GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error)
 
 	// Close the database. Unsafe for further use after calling regardless
 	// of return value.

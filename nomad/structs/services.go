@@ -41,7 +41,7 @@ const (
 
 // ServiceCheck represents the Consul health check.
 type ServiceCheck struct {
-	Name                   string              // Name of the check, defaults to id
+	Name                   string              // Name of the check, defaults to a generated label
 	Type                   string              // Type of the check - tcp, http, docker and script
 	Command                string              // Command is the command to run for script checks
 	Args                   []string            // Args is a list of arguments for script checks
@@ -64,6 +64,12 @@ type ServiceCheck struct {
 	FailuresBeforeCritical int                 // Number of consecutive failures required before considered unhealthy
 	Body                   string              // Body to use in HTTP check
 	OnUpdate               string
+}
+
+// IsReadiness returns whether the configuration of the ServiceCheck is effectively
+// a readiness check - i.e. check failures do not affect a deployment.
+func (sc *ServiceCheck) IsReadiness() bool {
+	return sc != nil && sc.OnUpdate == "ignore"
 }
 
 // Copy the stanza recursively. Returns nil if nil.
