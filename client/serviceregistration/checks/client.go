@@ -12,6 +12,8 @@ import (
 	"oss.indeed.com/go/libtime"
 )
 
+// A Query is derrived from a structs.ServiceCheck and contains the minimal
+// amount of information needed to actually execute that check.
 type Query struct {
 	Kind    Kind
 	Type    string

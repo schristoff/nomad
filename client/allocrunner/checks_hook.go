@@ -91,7 +91,7 @@ func (h *checksHook) Prerun() error {
 	// insert a pending result into state store for each check
 	for id, check := range current {
 		result := checks.Stub(id, checks.GetKind(check), now)
-		netlog.Yellow("set id: %x", id)
+		netlog.Yellow("set id: %s", id)
 		if err := h.store.Set(h.allocID, id, result); err != nil {
 			return err
 		}

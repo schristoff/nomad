@@ -2,6 +2,7 @@ package checks
 
 import (
 	"crypto/md5"
+	"fmt"
 )
 
 // An ID is unique to a check.
@@ -16,7 +17,8 @@ func MakeID(allocID, group, task, name string) ID {
 	_, _ = sum.Write([]byte(group))
 	_, _ = sum.Write([]byte(task))
 	_, _ = sum.Write([]byte(name))
-	return ID(sum.Sum(nil))
+	h := sum.Sum(nil)
+	return ID(fmt.Sprintf("%x", h))
 }
 
 // The Kind of a check is either Healthiness or Readiness.

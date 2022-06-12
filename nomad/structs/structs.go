@@ -26,7 +26,6 @@ import (
 
 	"github.com/hashicorp/nomad/helper/escapingfs"
 	"golang.org/x/crypto/blake2b"
-
 	"github.com/hashicorp/cronexpr"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/go-multierror"
