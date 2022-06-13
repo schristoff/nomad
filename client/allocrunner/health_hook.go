@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/nomad/client/allochealth"
 	"github.com/hashicorp/nomad/client/allocrunner/interfaces"
 	"github.com/hashicorp/nomad/client/serviceregistration"
@@ -14,21 +14,21 @@ import (
 	"github.com/hashicorp/nomad/nomad/structs"
 )
 
-// healthMutator is able to set/clear alloc health.
+// healthSetter is able to set/clear alloc health.
 type healthSetter interface {
 	// HasHealth returns true if health is already set.
 	HasHealth() bool
 
-	// Set health via the mutator
+	// SetHealth via the mutator.
 	SetHealth(healthy, isDeploy bool, taskEvents map[string]*structs.TaskEvent)
 
-	// Clear health when the deployment ID changes
+	// ClearHealth for when the deployment ID changes.
 	ClearHealth()
 }
 
 // allocHealthWatcherHook is responsible for watching an allocation's task
 // status and (optionally) Consul health check status to determine if the
-// allocation is health or unhealthy. Used by deployments and migrations.
+// allocation is healthy or unhealthy. Used by deployments and migrations.
 type allocHealthWatcherHook struct {
 	healthSetter healthSetter
 
@@ -64,10 +64,10 @@ type allocHealthWatcherHook struct {
 	// hold hookLock to access.
 	isDeploy bool
 
-	logger log.Logger
+	logger hclog.Logger
 }
 
-func newAllocHealthWatcherHook(logger log.Logger, alloc *structs.Allocation, hs healthSetter,
+func newAllocHealthWatcherHook(logger hclog.Logger, alloc *structs.Allocation, hs healthSetter,
 	listener *cstructs.AllocListener, consul serviceregistration.Handler) interfaces.RunnerHook {
 
 	// Neither deployments nor migrations care about the health of
@@ -194,7 +194,7 @@ func (h *allocHealthWatcherHook) Postrun() error {
 
 func (h *allocHealthWatcherHook) Shutdown() {
 	// Same as Postrun
-	h.Postrun()
+	_ = h.Postrun()
 }
 
 // watchHealth watches alloc health until it is set, the alloc is stopped, the

@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/nomad/helper/escapingfs"
-	"golang.org/x/crypto/blake2b"
 	"github.com/hashicorp/cronexpr"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/go-multierror"
@@ -36,12 +34,14 @@ import (
 	"github.com/hashicorp/nomad/helper"
 	"github.com/hashicorp/nomad/helper/args"
 	"github.com/hashicorp/nomad/helper/constraints/semver"
+	"github.com/hashicorp/nomad/helper/escapingfs"
 	"github.com/hashicorp/nomad/helper/uuid"
 	"github.com/hashicorp/nomad/lib/cpuset"
 	"github.com/hashicorp/nomad/lib/kheap"
 	psstructs "github.com/hashicorp/nomad/plugins/shared/structs"
 	"github.com/miekg/dns"
 	"github.com/mitchellh/copystructure"
+	"golang.org/x/crypto/blake2b"
 )
 
 var (
@@ -4799,7 +4799,7 @@ func (jc *JobChildrenSummary) Copy() *JobChildrenSummary {
 	return njc
 }
 
-// TaskGroup summarizes the state of all the allocations of a particular
+// TaskGroupSummary summarizes the state of all the allocations of a particular
 // TaskGroup
 type TaskGroupSummary struct {
 	Queued   int
@@ -4890,9 +4890,9 @@ func (u *UpdateStrategy) Copy() *UpdateStrategy {
 		return nil
 	}
 
-	copy := new(UpdateStrategy)
-	*copy = *u
-	return copy
+	c := new(UpdateStrategy)
+	*c = *u
+	return c
 }
 
 func (u *UpdateStrategy) Validate() error {
