@@ -149,7 +149,7 @@ func (ar *allocRunner) initRunnerHooks(config *clientconfig.Config) error {
 		newCgroupHook(ar.Alloc(), ar.cpusetManager),
 		newUpstreamAllocsHook(hookLogger, ar.prevAllocWatcher),
 		newDiskMigrationHook(hookLogger, ar.prevAllocMigrator, ar.allocDir),
-		newAllocHealthWatcherHook(hookLogger, alloc, hs, ar.Listener(), ar.consulClient),
+		newAllocHealthWatcherHook(hookLogger, alloc, hs, ar.Listener(), ar.consulClient, ar.checkStore),
 		newNetworkHook(hookLogger, ns, alloc, nm, nc, ar, builtTaskEnv),
 		newGroupServiceHook(groupServiceHookConfig{
 			alloc:               alloc,

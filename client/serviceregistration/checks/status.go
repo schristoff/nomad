@@ -36,6 +36,15 @@ const (
 	Readiness
 )
 
+func (k Kind) String() string {
+	switch k {
+	case Readiness:
+		return "readiness"
+	default:
+		return "healthiness"
+	}
+}
+
 // A Result is the immediate detected state of a check after executing it. A result
 // of a query is ternary - success, failure, or pending (not yet executed).
 type Result byte
@@ -63,19 +72,25 @@ func (r Result) String() string {
 // Knowledge of the context of the check (i.e. alloc / task) is left to the caller.
 // Any check math (e.g. success_before_passing) is left to the caller.
 type QueryResult struct {
-	ID     ID
-	Kind   Kind
-	Result Result
-	Output string
-	When   int64
+	ID        ID
+	Kind      Kind
+	Result    Result
+	Output    string
+	Timestamp int64
 }
 
+// Stub creates a temporary QueryResult for the check of ID in the Pending state
+// so we can represent the status of not being checked yet.
 func Stub(id ID, kind Kind, now int64) *QueryResult {
 	return &QueryResult{
-		ID:     id,
-		Kind:   kind,
-		Result: Pending,
-		Output: "waiting on nomad",
-		When:   now,
+		ID:        id,
+		Kind:      kind,
+		Result:    Pending,
+		Output:    "waiting on nomad",
+		Timestamp: now,
 	}
+}
+
+func (qr *QueryResult) String() string {
+	return fmt.Sprintf("(%s %s %s %v)", qr.ID, qr.Kind, qr.Result, qr.Timestamp)
 }

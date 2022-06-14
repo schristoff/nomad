@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/nomad/client/allochealth"
 	"github.com/hashicorp/nomad/client/allocrunner/interfaces"
 	"github.com/hashicorp/nomad/client/serviceregistration"
+	"github.com/hashicorp/nomad/client/serviceregistration/checks/checkstore"
 	cstructs "github.com/hashicorp/nomad/client/structs"
 	"github.com/hashicorp/nomad/nomad/structs"
 )
@@ -32,8 +33,11 @@ type healthSetter interface {
 type allocHealthWatcherHook struct {
 	healthSetter healthSetter
 
-	// consul client used to monitor health checks
+	// consul client used to monitor Consul service health checks
 	consul serviceregistration.Handler
+
+	// checkStore is used to monitor Nomad service health checks
+	checkStore checkstore.Store
 
 	// listener is given to trackers to listen for alloc updates and closed
 	// when the alloc is destroyed.
@@ -68,7 +72,7 @@ type allocHealthWatcherHook struct {
 }
 
 func newAllocHealthWatcherHook(logger hclog.Logger, alloc *structs.Allocation, hs healthSetter,
-	listener *cstructs.AllocListener, consul serviceregistration.Handler) interfaces.RunnerHook {
+	listener *cstructs.AllocListener, consul serviceregistration.Handler, checkStore checkstore.Store) interfaces.RunnerHook {
 
 	// Neither deployments nor migrations care about the health of
 	// non-service jobs so never watch their health
@@ -85,6 +89,7 @@ func newAllocHealthWatcherHook(logger hclog.Logger, alloc *structs.Allocation, h
 		cancelFn:     func() {}, // initialize to prevent nil func panics
 		watchDone:    closedDone,
 		consul:       consul,
+		checkStore:   checkStore,
 		healthSetter: hs,
 		listener:     listener,
 	}
@@ -132,8 +137,9 @@ func (h *allocHealthWatcherHook) init() error {
 
 	h.logger.Trace("watching", "deadline", deadline, "checks", useChecks, "min_healthy_time", minHealthyTime)
 	// Create a new tracker, start it, and watch for health results.
-	tracker := allochealth.NewTracker(ctx, h.logger, h.alloc,
-		h.listener, h.consul, minHealthyTime, useChecks)
+	tracker := allochealth.NewTracker(
+		ctx, h.logger, h.alloc, h.listener, h.consul, h.checkStore, minHealthyTime, useChecks,
+	)
 	tracker.Start()
 
 	// Create a new done chan and start watching for health updates

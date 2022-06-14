@@ -12,7 +12,7 @@ import (
 	"oss.indeed.com/go/libtime"
 )
 
-// A Query is derrived from a structs.ServiceCheck and contains the minimal
+// A Query is derived from a structs.ServiceCheck and contains the minimal
 // amount of information needed to actually execute that check.
 type Query struct {
 	Kind    Kind
@@ -74,9 +74,9 @@ func (c *checker) Check(q *Query) (*QueryResult, error) {
 
 func (c *checker) checkTCP(q *Query) *QueryResult {
 	status := &QueryResult{
-		Kind:   q.Kind,
-		When:   c.now(),
-		Result: Success,
+		Kind:      q.Kind,
+		Timestamp: c.now(),
+		Result:    Success,
 	}
 	if _, err := net.Dial("tcp", q.Address); err != nil {
 		c.log.Info("check is failing", "kind", q.Kind, "address", q.Address, "error", err)
@@ -89,9 +89,9 @@ func (c *checker) checkTCP(q *Query) *QueryResult {
 
 func (c *checker) checkHTTP(q *Query) (*QueryResult, error) {
 	status := &QueryResult{
-		Kind:   q.Kind,
-		When:   c.now(),
-		Result: Pending,
+		Kind:      q.Kind,
+		Timestamp: c.now(),
+		Result:    Pending,
 	}
 
 	u := q.Address + q.Path
