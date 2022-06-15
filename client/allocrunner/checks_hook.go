@@ -28,23 +28,29 @@ type observers map[checks.ID]*observer
 type observer struct {
 	ctx     context.Context
 	check   *structs.ServiceCheck
-	store   checkstore.Shim
+	shim    checkstore.Shim
 	checker checks.Checker
+	allocID string
 }
 
 func (o *observer) start() {
 	timer, cancel := helper.NewSafeTimer(0)
 	defer cancel()
 
+	netlog.Cyan("observer started for check: %s", o.check.Name)
+
 	for {
 		select {
 		case <-o.ctx.Done():
+			netlog.Cyan("observer exit, check: %s", o.check.Name)
 			return
 		case <-timer.C:
 			// do check
 			result := o.checker.Check(checks.GetQuery(o.check))
+			netlog.Cyan("observer result: %s", result)
 
-			// and put the results ... directly in the store
+			// and put the results into the store
+			_ = o.shim.Set(o.allocID, result)
 
 			timer.Reset(o.check.Interval)
 		}
@@ -56,7 +62,8 @@ func (o *observer) start() {
 type checksHook struct {
 	logger  hclog.Logger
 	allocID string
-	store   checkstore.Shim
+	shim    checkstore.Shim
+	checker checks.Checker
 
 	// ctx is the context of the current set of checks. on an allocation update
 	// everything is replaced - the checks, observers, ctx, etc.
@@ -70,12 +77,13 @@ type checksHook struct {
 func newChecksHook(
 	logger hclog.Logger,
 	alloc *structs.Allocation,
-	store checkstore.Shim,
+	shim checkstore.Shim,
 ) *checksHook {
 	h := &checksHook{
 		logger:  logger.Named(checksHookName),
 		allocID: alloc.ID,
-		store:   store,
+		shim:    shim,
+		checker: checks.New(logger),
 	}
 	h.ctx, h.stop = context.WithCancel(context.Background())
 	h.observers = h.observersFor(findChecks(alloc))
@@ -86,8 +94,11 @@ func (h *checksHook) observersFor(m map[checks.ID]*structs.ServiceCheck) observe
 	obs := make(map[checks.ID]*observer, len(m))
 	for id, check := range m {
 		obs[id] = &observer{
-			ctx:   h.ctx,
-			check: check,
+			ctx:     h.ctx,
+			check:   check,
+			shim:    h.shim,
+			checker: h.checker,
+			allocID: h.allocID,
 		}
 	}
 	return obs
@@ -146,10 +157,14 @@ func (h *checksHook) Prerun() error {
 	// insert a pending result into state store for each check
 	for id, check := range current {
 		result := checks.Stub(id, checks.GetKind(check), now)
-		netlog.Yellow("set id: %s", id)
-		if err := h.store.Set(h.allocID, id, result); err != nil {
+		if err := h.shim.Set(h.allocID, result); err != nil {
 			return err
 		}
+	}
+
+	// start the observers
+	for _, obs := range h.observers {
+		go obs.start()
 	}
 
 	return nil
@@ -172,7 +187,7 @@ func (h *checksHook) PreKill() {
 	netlog.Yellow("ch.PreKill: issue stop")
 	h.stop()
 
-	if err := h.store.Purge(h.allocID); err != nil {
+	if err := h.shim.Purge(h.allocID); err != nil {
 		h.logger.Error("failed to purge check results", "alloc_id", h.allocID, "error", err)
 	}
 }

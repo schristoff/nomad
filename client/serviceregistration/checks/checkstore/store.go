@@ -10,15 +10,11 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// Shim is used to record the latest check status information, one layer above
+// A Shim is used to track the latest check status information, one layer above
 // the client persistent store so we can do efficient indexing, etc.
 type Shim interface {
 	// Set the latest result for a specific check.
-	Set(
-		allocID string,
-		checkID checks.ID,
-		result *checks.QueryResult,
-	) error
+	Set(allocID string, result *checks.QueryResult) error
 
 	// List the latest results for a specific allocation.
 	List(allocID string) map[checks.ID]*checks.QueryResult
@@ -39,7 +35,7 @@ type AllocResultMap map[checks.ID]*checks.QueryResult
 // group and task checks across all allocations on a client.
 type ClientResultMap map[string]AllocResultMap
 
-type store struct {
+type shim struct {
 	log hclog.Logger
 
 	db state.StateDB
@@ -52,33 +48,33 @@ type store struct {
 //
 // (todo: and will initialize from db)
 func NewStore(log hclog.Logger, db state.StateDB) Shim {
-	return &store{
+	return &shim{
 		log:     log.Named("check_store"),
 		db:      db,
 		current: make(ClientResultMap),
 	}
 }
 
-func (s *store) restore() {
+func (s *shim) restore() {
 	// todo restore state from db
 }
 
-func (s *store) Set(allocID string, checkID checks.ID, qr *checks.QueryResult) error {
+func (s *shim) Set(allocID string, qr *checks.QueryResult) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.log.Trace("setting check status", "alloc_id", allocID, "check_id", checkID, "result", qr.Result)
+	s.log.Trace("setting check status", "alloc_id", allocID, "check_id", qr.ID, "result", qr.Result)
 
 	if _, exists := s.current[allocID]; !exists {
 		s.current[allocID] = make(map[checks.ID]*checks.QueryResult)
 	}
 
-	s.current[allocID][checkID] = qr
+	s.current[allocID][qr.ID] = qr
 
 	return s.db.PutCheckResult(allocID, qr)
 }
 
-func (s *store) List(allocID string) map[checks.ID]*checks.QueryResult {
+func (s *shim) List(allocID string) map[checks.ID]*checks.QueryResult {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -90,7 +86,7 @@ func (s *store) List(allocID string) map[checks.ID]*checks.QueryResult {
 	return helper.CopyMap(m)
 }
 
-func (s *store) Purge(allocID string) error {
+func (s *shim) Purge(allocID string) error {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -101,7 +97,7 @@ func (s *store) Purge(allocID string) error {
 	return s.db.PurgeCheckResults(allocID)
 }
 
-func (s *store) Keep(allocID string, checkIDs []checks.ID) error {
+func (s *shim) Keep(allocID string, checkIDs []checks.ID) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
