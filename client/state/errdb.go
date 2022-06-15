@@ -93,11 +93,11 @@ func (m *ErrDB) PutDriverPluginState(ps *driverstate.PluginState) error {
 	return fmt.Errorf("Error!")
 }
 
-func (m *ErrDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
+func (m *ErrDB) PutCheckResult(allocID string, qr *checks.QueryResult) error {
 	return fmt.Errorf("Error!")
 }
 
-func (m *ErrDB) GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error) {
+func (m *ErrDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error) {
 	return nil, fmt.Errorf("Error!")
 }
 

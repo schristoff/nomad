@@ -243,7 +243,7 @@ func (m *MemDB) PutDynamicPluginRegistryState(ps *dynamicplugins.RegistryState) 
 	return nil
 }
 
-func (m *MemDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
+func (m *MemDB) PutCheckResult(allocID string, qr *checks.QueryResult) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -251,7 +251,7 @@ func (m *MemDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
 	return nil
 }
 
-func (m *MemDB) GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error) {
+func (m *MemDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

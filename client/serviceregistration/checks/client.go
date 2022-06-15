@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -40,7 +41,7 @@ func GetQuery(c *structs.ServiceCheck) *Query {
 }
 
 type Checker interface {
-	Check(*Query) (*QueryResult, error)
+	Check(*Query) *QueryResult
 }
 
 func New(log hclog.Logger) Checker {
@@ -63,12 +64,12 @@ func (c *checker) now() int64 {
 	return c.clock.Now().UTC().Unix()
 }
 
-func (c *checker) Check(q *Query) (*QueryResult, error) {
+func (c *checker) Check(q *Query) *QueryResult {
 	switch q.Type {
 	case "http":
 		return c.checkHTTP(q)
 	default:
-		return c.checkTCP(q), nil
+		return c.checkTCP(q)
 	}
 }
 
@@ -87,35 +88,41 @@ func (c *checker) checkTCP(q *Query) *QueryResult {
 	return status
 }
 
-func (c *checker) checkHTTP(q *Query) (*QueryResult, error) {
-	status := &QueryResult{
+func (c *checker) checkHTTP(q *Query) *QueryResult {
+	qr := &QueryResult{
 		Kind:      q.Kind,
 		Timestamp: c.now(),
 		Result:    Pending,
 	}
 
 	u := q.Address + q.Path
-	request, reqErr := http.NewRequest(q.Method, u, nil)
-	if reqErr != nil {
-		return status, reqErr
+	request, err := http.NewRequest(q.Method, u, nil)
+	if err != nil {
+		qr.Output = fmt.Sprintf("nomad: %s", err.Error())
+		qr.Result = Failure
+		return qr
 	}
 
-	result, doErr := c.httpClient.Do(request)
-	if doErr != nil {
-		return status, doErr
+	result, err := c.httpClient.Do(request)
+	if err != nil {
+		qr.Output = fmt.Sprintf("nomad: %s", err.Error())
+		qr.Result = Failure
+		return qr
 	}
 
-	b, bodyErr := ioutil.ReadAll(result.Body)
-	if bodyErr != nil {
-		return status, bodyErr
-	}
-
-	status.Output = string(b)
-	if result.StatusCode < 400 {
-		status.Result = Success
+	b, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		qr.Output = fmt.Sprintf("nomad: %s", err.Error())
+		// let the status code dictate query result
 	} else {
-		status.Result = Failure
+		qr.Output = string(b)
 	}
 
-	return status, nil
+	if result.StatusCode < 400 {
+		qr.Result = Success
+	} else {
+		qr.Result = Failure
+	}
+
+	return qr
 }

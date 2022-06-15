@@ -6,5 +6,6 @@ import (
 
 var (
 	_ interfaces.RunnerPrerunHook  = (*checksHook)(nil)
+	_ interfaces.RunnerUpdateHook  = (*checksHook)(nil)
 	_ interfaces.RunnerPreKillHook = (*checksHook)(nil)
 )

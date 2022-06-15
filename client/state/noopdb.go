@@ -88,11 +88,11 @@ func (n NoopDB) GetDynamicPluginRegistryState() (*dynamicplugins.RegistryState, 
 	return nil, nil
 }
 
-func (n NoopDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
+func (n NoopDB) PutCheckResult(allocID string, qr *checks.QueryResult) error {
 	return nil
 }
 
-func (n NoopDB) GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error) {
+func (n NoopDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error) {
 	return nil, nil
 }
 

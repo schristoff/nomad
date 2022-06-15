@@ -89,7 +89,7 @@ type Config struct {
 	ServiceRegWrapper *wrapper.HandlerWrapper
 
 	// CheckStore contains check result information.
-	CheckStore checkstore.Store
+	CheckStore checkstore.Shim
 
 	// Getter is an interface for retrieving artifacts.
 	Getter interfaces.ArtifactGetter

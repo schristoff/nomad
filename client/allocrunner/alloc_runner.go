@@ -186,7 +186,7 @@ type allocRunner struct {
 	serviceRegWrapper *wrapper.HandlerWrapper
 
 	// checkStore contains check status information
-	checkStore checkstore.Store
+	checkStore checkstore.Shim
 
 	// getter is an interface for retrieving artifacts.
 	getter cinterfaces.ArtifactGetter

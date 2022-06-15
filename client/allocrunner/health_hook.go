@@ -37,7 +37,7 @@ type allocHealthWatcherHook struct {
 	consul serviceregistration.Handler
 
 	// checkStore is used to monitor Nomad service health checks
-	checkStore checkstore.Store
+	checkStore checkstore.Shim
 
 	// listener is given to trackers to listen for alloc updates and closed
 	// when the alloc is destroyed.
@@ -72,7 +72,7 @@ type allocHealthWatcherHook struct {
 }
 
 func newAllocHealthWatcherHook(logger hclog.Logger, alloc *structs.Allocation, hs healthSetter,
-	listener *cstructs.AllocListener, consul serviceregistration.Handler, checkStore checkstore.Store) interfaces.RunnerHook {
+	listener *cstructs.AllocListener, consul serviceregistration.Handler, checkStore checkstore.Shim) interfaces.RunnerHook {
 
 	// Neither deployments nor migrations care about the health of
 	// non-service jobs so never watch their health

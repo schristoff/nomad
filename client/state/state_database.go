@@ -801,14 +801,14 @@ func (s *BoltStateDB) DB() *boltdd.DB {
 }
 
 // PutCheckStatus puts qr into the state store.
-func (s *BoltStateDB) PutCheckStatus(allocID string, qr *checks.QueryResult) error {
+func (s *BoltStateDB) PutCheckResult(allocID string, qr *checks.QueryResult) error {
 	return s.db.Update(func(tx *boltdd.Tx) error {
 		return nil
 	})
 }
 
 // GetCheckStatuses gets the check results associated with allocID from the state store.
-func (s *BoltStateDB) GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error) {
+func (s *BoltStateDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error) {
 	var m map[checks.ID]*checks.QueryResult
 	err := s.db.View(func(tx *boltdd.Tx) error {
 		return nil

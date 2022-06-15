@@ -65,7 +65,7 @@ type Tracker struct {
 	consulClient serviceregistration.Handler
 
 	// checkStore is used to lookup the status of Nomad service checks
-	checkStore checkstore.Store
+	checkStore checkstore.Shim
 
 	// healthy is used to signal whether we have determined the allocation to be
 	// healthy or unhealthy
@@ -112,7 +112,7 @@ func NewTracker(
 	alloc *structs.Allocation,
 	allocUpdates *cstructs.AllocListener,
 	consulClient serviceregistration.Handler,
-	checkStore checkstore.Store,
+	checkStore checkstore.Shim,
 	minHealthyTime time.Duration,
 	useChecks bool,
 ) *Tracker {

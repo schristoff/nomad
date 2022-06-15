@@ -84,11 +84,17 @@ type StateDB interface {
 	// PutDynamicPluginRegistryState is used to store the dynamic plugin manager's state.
 	PutDynamicPluginRegistryState(state *dynamicplugins.RegistryState) error
 
-	// PutCheckStatus sets the query result for the check implied in qr.
-	PutCheckStatus(allocID string, qr *checks.QueryResult) error
+	// PutCheckResult sets the query result for the check implied in qr.
+	PutCheckResult(allocID string, qr *checks.QueryResult) error
 
-	// GetCheckStatuses gets the query result for the alloc.
-	GetCheckStatuses(allocID string) (map[checks.ID]*checks.QueryResult, error)
+	// DeleteCheckResults removes the given set of check results.
+	DeleteCheckResults(allocID string, checkIDs []checks.ID) error
+
+	// PurgeCheckResults removes all check results of the given allocation.
+	PurgeCheckResults(allocID string) error
+
+	// GetCheckResults gets the query result for the alloc.
+	GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error)
 
 	// Close the database. Unsafe for further use after calling regardless
 	// of return value.

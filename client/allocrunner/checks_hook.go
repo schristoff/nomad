@@ -1,10 +1,12 @@
 package allocrunner
 
 import (
+	"context"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/nomad/client/allocrunner/interfaces"
 	"github.com/hashicorp/nomad/client/serviceregistration/checks"
 	"github.com/hashicorp/nomad/client/serviceregistration/checks/checkstore"
 	"github.com/hashicorp/nomad/helper"
@@ -17,35 +19,83 @@ const (
 	checksHookName = "checks_hook"
 )
 
+// observers maintains a map from check_id -> observer for that check. Each
+// observer in the map should be tied to the same context.
+type observers map[checks.ID]*observer
+
+// An observer is used to execute checks on their interval and update the check
+// store with those results.
+type observer struct {
+	ctx     context.Context
+	check   *structs.ServiceCheck
+	store   checkstore.Shim
+	checker checks.Checker
+}
+
+func (o *observer) start() {
+	timer, cancel := helper.NewSafeTimer(0)
+	defer cancel()
+
+	for {
+		select {
+		case <-o.ctx.Done():
+			return
+		case <-timer.C:
+			// do check
+			result := o.checker.Check(checks.GetQuery(o.check))
+
+			// and put the results ... directly in the store
+
+			timer.Reset(o.check.Interval)
+		}
+	}
+}
+
 // checksHook manages checks of Nomad service registrations, at both the group and
 // task level, by storing / removing them from the Client state store.
 type checksHook struct {
 	logger  hclog.Logger
 	allocID string
-	store   checkstore.Store
+	store   checkstore.Shim
 
-	lock   sync.RWMutex
-	checks map[checks.ID]*structs.ServiceCheck
+	// ctx is the context of the current set of checks. on an allocation update
+	// everything is replaced - the checks, observers, ctx, etc.
+	ctx  context.Context
+	stop func()
+
+	lock      sync.RWMutex
+	observers map[checks.ID]*observer
 }
 
 func newChecksHook(
 	logger hclog.Logger,
 	alloc *structs.Allocation,
-	store checkstore.Store,
+	store checkstore.Shim,
 ) *checksHook {
 	h := &checksHook{
 		logger:  logger.Named(checksHookName),
 		allocID: alloc.ID,
 		store:   store,
 	}
-	h.checks = h.findChecks(alloc)
+	h.ctx, h.stop = context.WithCancel(context.Background())
+	h.observers = h.observersFor(findChecks(alloc))
 	return h
 }
 
-func (h *checksHook) findChecks(alloc *structs.Allocation) map[checks.ID]*structs.ServiceCheck {
+func (h *checksHook) observersFor(m map[checks.ID]*structs.ServiceCheck) observers {
+	obs := make(map[checks.ID]*observer, len(m))
+	for id, check := range m {
+		obs[id] = &observer{
+			ctx:   h.ctx,
+			check: check,
+		}
+	}
+	return obs
+}
+
+func findChecks(alloc *structs.Allocation) map[checks.ID]*structs.ServiceCheck {
 	tg := alloc.Job.LookupTaskGroup(alloc.TaskGroup)
 	if tg == nil {
-		h.logger.Error("failed to find group", "alloc_id", alloc.ID, "group", alloc.TaskGroup)
 		return nil
 	}
 
@@ -76,17 +126,22 @@ func (h *checksHook) Name() string {
 	return checksHookName
 }
 
-func (h *checksHook) current() map[checks.ID]*structs.ServiceCheck {
+func (h *checksHook) getChecks() map[checks.ID]*structs.ServiceCheck {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
-	return helper.CopyMap(h.checks)
+
+	m := make(map[checks.ID]*structs.ServiceCheck, len(h.observers))
+	for id, obs := range h.observers {
+		m[id] = obs.check
+	}
+	return m
 }
 
 func (h *checksHook) Prerun() error {
 	now := time.Now().UTC().Unix()
-	netlog.Yellow("checkHook PreRun, now: %v", now)
+	netlog.Yellow("ch.PreRun, now: %v", now)
 
-	current := h.current()
+	current := h.getChecks()
 
 	// insert a pending result into state store for each check
 	for id, check := range current {
@@ -97,21 +152,27 @@ func (h *checksHook) Prerun() error {
 		}
 	}
 
-	// startup the check goroutine
+	return nil
+}
+
+func (h *checksHook) Update(request *interfaces.RunnerUpdateRequest) error {
+	netlog.Yellow("checksHook.Update, id: %s", request.Alloc.ID)
+
+	netlog.Yellow("ch.Update: issue stop")
+
+	// todo: need to reconcile check store, may be checks to remove
 
 	return nil
 }
 
 func (h *checksHook) PreKill() {
-	netlog.Yellow("checksHook PreKill")
+	netlog.Yellow("ch.PreKill")
 
-	// stop the check goroutine
+	// terminate the background thing
+	netlog.Yellow("ch.PreKill: issue stop")
+	h.stop()
 
-	// purge checks from state store
-
-	current := h.current()
-	for id := range current {
-		netlog.Yellow("remove id: %s", id)
+	if err := h.store.Purge(h.allocID); err != nil {
+		h.logger.Error("failed to purge check results", "alloc_id", h.allocID, "error", err)
 	}
-
 }

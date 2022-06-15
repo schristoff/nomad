@@ -240,7 +240,7 @@ type Client struct {
 
 	// checkStore is used to store group and task checks and their current pass/fail
 	// status.
-	checkStore checkstore.Store
+	checkStore checkstore.Shim
 
 	// serviceRegWrapper wraps the consulService and nomadService
 	// implementations so that the alloc and task runner service hooks can call
