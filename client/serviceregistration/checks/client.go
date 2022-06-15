@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -16,11 +17,12 @@ import (
 // A Query is derived from a structs.ServiceCheck and contains the minimal
 // amount of information needed to actually execute that check.
 type Query struct {
-	Kind    Kind
-	Type    string
-	Address string
-	Path    string // http only
-	Method  string // http only
+	Kind     Kind
+	Type     string
+	Address  string
+	Protocol string // http checks only (http or https)
+	Path     string // http checks only
+	Method   string // http checks only
 }
 
 // GetKind determines whether the check is readiness or healthiness.
@@ -33,12 +35,17 @@ func GetKind(c *structs.ServiceCheck) Kind {
 
 // GetQuery extracts the needed info from c to actually execute the check.
 func GetQuery(c *structs.ServiceCheck) *Query {
+	protocol := "http"
+	if c.Protocol != "" {
+		protocol = c.Protocol
+	}
 	return &Query{
-		Kind:    GetKind(c),
-		Type:    c.Type,
-		Address: "127.0.0.1:8080", // todo (YOU ARE HERE)
-		Path:    c.Path,
-		Method:  http.MethodGet,
+		Kind:     GetKind(c),
+		Type:     c.Type,
+		Address:  "127.0.0.1:8080", // todo (YOU ARE HERE)
+		Path:     c.Path,
+		Method:   c.Method,
+		Protocol: protocol,
 	}
 }
 
@@ -97,7 +104,12 @@ func (c *checker) checkHTTP(q *Query) *QueryResult {
 		Result:    Pending,
 	}
 
-	u := q.Address + q.Path
+	u := (&url.URL{
+		Scheme: q.Protocol,
+		Host:   q.Address,
+		Path:   q.Path,
+	}).String()
+
 	request, err := http.NewRequest(q.Method, u, nil)
 	if err != nil {
 		qr.Output = fmt.Sprintf("nomad: %s", err.Error())

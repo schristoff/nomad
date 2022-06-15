@@ -31,6 +31,7 @@ type observer struct {
 	shim    checkstore.Shim
 	checker checks.Checker
 	allocID string
+	checkID checks.ID
 }
 
 func (o *observer) start() {
@@ -47,9 +48,11 @@ func (o *observer) start() {
 		case <-timer.C:
 			// do check
 			result := o.checker.Check(checks.GetQuery(o.check))
-			netlog.Cyan("observer result: %s", result)
+			netlog.Cyan("observer result: %s ...", result)
+			netlog.Cyan("%s", result.Output)
 
 			// and put the results into the store
+			result.ID = o.checkID
 			_ = o.shim.Set(o.allocID, result)
 
 			timer.Reset(o.check.Interval)
@@ -99,6 +102,7 @@ func (h *checksHook) observersFor(m map[checks.ID]*structs.ServiceCheck) observe
 			shim:    h.shim,
 			checker: h.checker,
 			allocID: h.allocID,
+			checkID: id,
 		}
 	}
 	return obs

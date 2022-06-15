@@ -14,7 +14,10 @@ import (
 // the client persistent store so we can do efficient indexing, etc.
 type Shim interface {
 	// Set the latest result for a specific check.
-	Set(allocID string, result *checks.QueryResult) error
+	Set(
+		allocID string,
+		result *checks.QueryResult,
+	) error
 
 	// List the latest results for a specific allocation.
 	List(allocID string) map[checks.ID]*checks.QueryResult
@@ -62,6 +65,14 @@ func (s *shim) restore() {
 func (s *shim) Set(allocID string, qr *checks.QueryResult) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	if allocID == "" {
+		panic("empty alloc id")
+	}
+
+	if qr.ID == "" {
+		panic("empty qr id")
+	}
 
 	s.log.Trace("setting check status", "alloc_id", allocID, "check_id", qr.ID, "result", qr.Result)
 
