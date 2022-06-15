@@ -722,6 +722,34 @@ func (s *BoltStateDB) GetDynamicPluginRegistryState() (*dynamicplugins.RegistryS
 	return ps, nil
 }
 
+// PutCheckResult puts qr into the state store.
+func (s *BoltStateDB) PutCheckResult(allocID string, qr *checks.QueryResult) error {
+	return s.db.Update(func(tx *boltdd.Tx) error {
+		// todo
+		return nil
+	})
+}
+
+// GetCheckResults gets the check results associated with allocID from the state store.
+func (s *BoltStateDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error) {
+	var m map[checks.ID]*checks.QueryResult
+	err := s.db.View(func(tx *boltdd.Tx) error {
+		// todo
+		return nil
+	})
+	return m, err
+}
+
+func (s *BoltStateDB) DeleteCheckResults(allocID string, checkIDs []checks.ID) error {
+	// todo
+	return nil
+}
+
+func (s *BoltStateDB) PurgeCheckResults(allocID string) error {
+	// todo
+	return nil
+}
+
 // init initializes metadata entries in a newly created state database.
 func (s *BoltStateDB) init() error {
 	return s.db.Update(func(tx *boltdd.Tx) error {
@@ -798,20 +826,4 @@ func (s *BoltStateDB) Upgrade() error {
 // DB allows access to the underlying BoltDB for testing purposes.
 func (s *BoltStateDB) DB() *boltdd.DB {
 	return s.db
-}
-
-// PutCheckStatus puts qr into the state store.
-func (s *BoltStateDB) PutCheckResult(allocID string, qr *checks.QueryResult) error {
-	return s.db.Update(func(tx *boltdd.Tx) error {
-		return nil
-	})
-}
-
-// GetCheckStatuses gets the check results associated with allocID from the state store.
-func (s *BoltStateDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error) {
-	var m map[checks.ID]*checks.QueryResult
-	err := s.db.View(func(tx *boltdd.Tx) error {
-		return nil
-	})
-	return m, err
 }

@@ -101,9 +101,14 @@ func (m *ErrDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResu
 	return nil, fmt.Errorf("Error!")
 }
 
-func (m *ErrDB) Close() error {
+func (m *ErrDB) DeleteCheckResults(allocID string, checkIDs []checks.ID) error {
 	return fmt.Errorf("Error!")
 }
 
-// Ensure *ErrDB implements StateDB
-var _ StateDB = (*ErrDB)(nil)
+func (m *ErrDB) PurgeCheckResults(allocID string) error {
+	return fmt.Errorf("Error!")
+}
+
+func (m *ErrDB) Close() error {
+	return fmt.Errorf("Error!")
+}

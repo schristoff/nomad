@@ -34,9 +34,11 @@ func GetKind(c *structs.ServiceCheck) Kind {
 // GetQuery extracts the needed info from c to actually execute the check.
 func GetQuery(c *structs.ServiceCheck) *Query {
 	return &Query{
-		Kind: GetKind(c),
-		Type: c.Type,
-		// address
+		Kind:    GetKind(c),
+		Type:    c.Type,
+		Address: "127.0.0.1:8080", // todo (YOU ARE HERE)
+		Path:    c.Path,
+		Method:  http.MethodGet,
 	}
 }
 

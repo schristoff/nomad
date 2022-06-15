@@ -254,8 +254,23 @@ func (m *MemDB) PutCheckResult(allocID string, qr *checks.QueryResult) error {
 func (m *MemDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	return helper.CopyMap(m.checks[allocID]), nil
+}
+
+func (m *MemDB) DeleteCheckResults(allocID string, checkIDs []checks.ID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, id := range checkIDs {
+		delete(m.checks[allocID], id)
+	}
+	return nil
+}
+
+func (m *MemDB) PurgeCheckResults(allocID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.checks, allocID)
+	return nil
 }
 
 func (m *MemDB) Close() error {

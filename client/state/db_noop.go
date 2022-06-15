@@ -96,6 +96,14 @@ func (n NoopDB) GetCheckResults(allocID string) (map[checks.ID]*checks.QueryResu
 	return nil, nil
 }
 
+func (n NoopDB) DeleteCheckResults(allocID string, checkIDs []checks.ID) error {
+	return nil
+}
+
+func (n NoopDB) PurgeCheckResults(allocID string) error {
+	return nil
+}
+
 func (n NoopDB) Close() error {
 	return nil
 }
