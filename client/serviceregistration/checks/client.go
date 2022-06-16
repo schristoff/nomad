@@ -130,7 +130,7 @@ func address(qc *QueryContext, q *Query) (string, error) {
 		mode,             // check address mode
 		label,            // port label
 		qc.Networks,      // allocation networks
-		nil,              // driver network
+		nil,              // driver network (not supported)
 		qc.Ports,         // ports
 		nil,              // network status
 	)

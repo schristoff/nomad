@@ -48,9 +48,7 @@ func (o *observer) start() {
 			return
 		case <-timer.C:
 
-			// plumbing! need the QueryContext params
-
-			// do check
+			// execute the check
 			query := checks.GetQuery(o.check)
 			result := o.checker.Do(o.qc, query)
 
@@ -67,6 +65,8 @@ func (o *observer) start() {
 
 // checksHook manages checks of Nomad service registrations, at both the group and
 // task level, by storing / removing them from the Client state store.
+//
+// Does not manage Consul service checks; see groupServiceHook instead.
 type checksHook struct {
 	logger  hclog.Logger
 	shim    checkstore.Shim
@@ -124,31 +124,38 @@ func (h *checksHook) initialize(alloc *structs.Allocation) {
 	netlog.Purple("ports:", ports)
 	netlog.Purple("networks:", networks)
 
-	// init for nomad group services
-	for _, service := range tg.Services {
-		if service.Provider != structs.ServiceProviderNomad {
-			continue
-		}
-		for _, check := range service.Checks {
-			id := checks.MakeID(alloc.ID, alloc.TaskGroup, "group", check.Name)
-			h.observers[id] = &observer{
-				ctx:     h.ctx,
-				check:   check.Copy(),
-				shim:    h.shim,
-				checker: h.checker,
-				allocID: h.allocID,
-				qc: &checks.QueryContext{
-					ID:               id,
-					CustomAddress:    service.Address,
-					ServicePortLabel: service.PortLabel,
-					Ports:            ports,
-					Networks:         networks,
-				},
+	setup := func(name string, services []*structs.Service) {
+		for _, service := range services {
+			if service.Provider != structs.ServiceProviderNomad {
+				continue
+			}
+			for _, check := range service.Checks {
+				id := checks.MakeID(alloc.ID, alloc.TaskGroup, name, check.Name)
+				h.observers[id] = &observer{
+					ctx:     h.ctx,
+					check:   check.Copy(),
+					shim:    h.shim,
+					checker: h.checker,
+					allocID: h.allocID,
+					qc: &checks.QueryContext{
+						ID:               id,
+						CustomAddress:    service.Address,
+						ServicePortLabel: service.PortLabel,
+						Ports:            ports,
+						Networks:         networks,
+					},
+				}
 			}
 		}
 	}
 
-	// same for task services (todo)
+	// init for nomad group services
+	setup("group", tg.Services)
+
+	// init for nomad task services
+	for _, task := range tg.Tasks {
+		setup(task.Name, task.Services)
+	}
 }
 
 func (h *checksHook) Name() string {
