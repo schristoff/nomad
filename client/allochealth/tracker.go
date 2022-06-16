@@ -631,6 +631,7 @@ func (t *Tracker) watchNomadEvents() {
 					continue
 				}
 				netlog.Green("-> failure, healthiness")
+				passing = false
 				break
 			default:
 				passing = false

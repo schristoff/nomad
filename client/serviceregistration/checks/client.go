@@ -6,23 +6,39 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/nomad/client/serviceregistration"
 	"github.com/hashicorp/nomad/nomad/structs"
+	"gophers.dev/pkgs/netlog"
 	"oss.indeed.com/go/libtime"
 )
 
 // A Query is derived from a structs.ServiceCheck and contains the minimal
 // amount of information needed to actually execute that check.
 type Query struct {
-	Kind     Kind
-	Type     string
-	Address  string
+	Kind Kind   // readiness or healthiness
+	Type string // tcp or http
+
+	AddressMode string // host, driver, or alloc
+	PortLabel   string // label or value
+
 	Protocol string // http checks only (http or https)
 	Path     string // http checks only
 	Method   string // http checks only
+}
+
+// A QueryContext contains allocation and service parameters necessary for
+// address resolution.
+type QueryContext struct {
+	ID               ID
+	CustomAddress    string
+	ServicePortLabel string
+	Networks         structs.Networks
+	Ports            structs.AllocatedPorts
 }
 
 // GetKind determines whether the check is readiness or healthiness.
@@ -40,20 +56,21 @@ func GetQuery(c *structs.ServiceCheck) *Query {
 		protocol = c.Protocol
 	}
 	return &Query{
-		Kind:     GetKind(c),
-		Type:     c.Type,
-		Address:  "127.0.0.1:8080", // todo (YOU ARE HERE)
-		Path:     c.Path,
-		Method:   c.Method,
-		Protocol: protocol,
+		Kind:        GetKind(c),
+		Type:        c.Type,
+		AddressMode: c.AddressMode,
+		PortLabel:   c.PortLabel,
+		Path:        c.Path,
+		Method:      c.Method,
+		Protocol:    protocol,
 	}
 }
 
 type Checker interface {
-	Check(*Query) *QueryResult
+	Do(*QueryContext, *Query) *QueryResult
 }
 
-func New(log hclog.Logger) Checker {
+func New(log hclog.Logger, alloc *structs.Allocation) Checker {
 	httpClient := cleanhttp.DefaultPooledClient()
 	httpClient.Timeout = 1 * time.Minute
 	return &checker{
@@ -73,40 +90,102 @@ func (c *checker) now() int64 {
 	return c.clock.Now().UTC().Unix()
 }
 
-func (c *checker) Check(q *Query) *QueryResult {
+// Do will execute the Query given the QueryContext and produce a QueryResult
+func (c *checker) Do(qc *QueryContext, q *Query) *QueryResult {
+	var qr *QueryResult
+
 	switch q.Type {
 	case "http":
-		return c.checkHTTP(q)
+		qr = c.checkHTTP(qc, q)
 	default:
-		return c.checkTCP(q)
+		qr = c.checkTCP(qc, q)
 	}
+
+	qr.ID = qc.ID
+	return qr
 }
 
-func (c *checker) checkTCP(q *Query) *QueryResult {
-	status := &QueryResult{
+// resolve the address to use when executing Query given a QueryContext
+func address(qc *QueryContext, q *Query) (string, error) {
+	mode := q.AddressMode
+	if mode == "" { // determine resolution for check address
+		if qc.CustomAddress != "" {
+			// if the service is using a custom address, enable the check to
+			// inherit that custom address
+			mode = structs.AddressModeAuto
+		} else {
+			// otherwise a check defaults to the host address
+			mode = structs.AddressModeHost
+		}
+	}
+
+	label := q.PortLabel
+	if label == "" {
+		label = qc.ServicePortLabel
+	}
+	netlog.Cyan("ADDRESS q.PortLabel: %s, qc.ServicePortLabel: %s, label: %s", q.PortLabel, qc.ServicePortLabel, label)
+
+	addr, port, err := serviceregistration.GetAddress(
+		qc.CustomAddress, // custom address
+		mode,             // check address mode
+		label,            // port label
+		qc.Networks,      // allocation networks
+		nil,              // driver network
+		qc.Ports,         // ports
+		nil,              // network status
+	)
+	if err != nil {
+		netlog.Cyan("ADDRESS error: %s", err.Error())
+		return "", err
+	}
+	if port > 0 {
+		addr = net.JoinHostPort(addr, strconv.Itoa(port))
+	}
+	netlog.Cyan("ADDRESS: %s, %d", addr, port)
+	return addr, nil
+}
+
+func (c *checker) checkTCP(qc *QueryContext, q *Query) *QueryResult {
+	qr := &QueryResult{
 		Kind:      q.Kind,
 		Timestamp: c.now(),
 		Result:    Success,
 	}
-	if _, err := net.Dial("tcp", q.Address); err != nil {
-		c.log.Info("check is failing", "kind", q.Kind, "address", q.Address, "error", err)
-		status.Output = err.Error()
-		status.Result = Failure
+
+	addr, err := address(qc, q)
+	if err != nil {
+		qr.Output = err.Error()
+		qr.Result = Failure
+		return qr
 	}
-	c.log.Trace("check is success", "kind", q.Kind, "address", q.Address)
-	return status
+
+	if _, err = net.Dial("tcp", addr); err != nil {
+		qr.Output = err.Error()
+		qr.Result = Failure
+		return qr
+	}
+
+	qr.Output = "nomad: ok"
+	return qr
 }
 
-func (c *checker) checkHTTP(q *Query) *QueryResult {
+func (c *checker) checkHTTP(qc *QueryContext, q *Query) *QueryResult {
 	qr := &QueryResult{
 		Kind:      q.Kind,
 		Timestamp: c.now(),
 		Result:    Pending,
 	}
 
+	addr, err := address(qc, q)
+	if err != nil {
+		qr.Output = err.Error()
+		qr.Result = Failure
+		return qr
+	}
+
 	u := (&url.URL{
 		Scheme: q.Protocol,
-		Host:   q.Address,
+		Host:   addr,
 		Path:   q.Path,
 	}).String()
 
