@@ -124,6 +124,8 @@ func (h *checksHook) initialize(alloc *structs.Allocation) {
 	netlog.Purple("ports:", ports)
 	netlog.Purple("networks:", networks)
 
+	// YOU ARE HERE: plumb in ar as netStatus so alloc networking works
+
 	setup := func(name string, services []*structs.Service) {
 		for _, service := range services {
 			if service.Provider != structs.ServiceProviderNomad {
