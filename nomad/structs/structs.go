@@ -10591,6 +10591,12 @@ func (a *AllocNetworkStatus) Copy() *AllocNetworkStatus {
 	}
 }
 
+// NetworkStatus is an interface satisfied by alloc runner, for acquiring the
+// network status of an allocation.
+type NetworkStatus interface {
+	NetworkStatus() *AllocNetworkStatus
+}
+
 // AllocDeploymentStatus captures the status of the allocation as part of the
 // deployment. This can include things like if the allocation has been marked as
 // healthy.

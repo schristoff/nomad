@@ -69,6 +69,7 @@ func (o *observer) start() {
 // Does not manage Consul service checks; see groupServiceHook instead.
 type checksHook struct {
 	logger  hclog.Logger
+	network structs.NetworkStatus
 	shim    checkstore.Shim
 	checker checks.Checker
 	allocID string
@@ -84,11 +85,13 @@ func newChecksHook(
 	logger hclog.Logger,
 	alloc *structs.Allocation,
 	shim checkstore.Shim,
+	network structs.NetworkStatus,
 ) *checksHook {
 	h := &checksHook{
 		logger:  logger.Named(checksHookName),
 		allocID: alloc.ID,
 		shim:    shim,
+		network: network,
 		checker: checks.New(logger, alloc),
 	}
 	h.initialize(alloc)
@@ -124,8 +127,6 @@ func (h *checksHook) initialize(alloc *structs.Allocation) {
 	netlog.Purple("ports:", ports)
 	netlog.Purple("networks:", networks)
 
-	// YOU ARE HERE: plumb in ar as netStatus so alloc networking works
-
 	setup := func(name string, services []*structs.Service) {
 		for _, service := range services {
 			if service.Provider != structs.ServiceProviderNomad {
@@ -145,6 +146,7 @@ func (h *checksHook) initialize(alloc *structs.Allocation) {
 						ServicePortLabel: service.PortLabel,
 						Ports:            ports,
 						Networks:         networks,
+						NetworkStatus:    h.network,
 					},
 				}
 			}

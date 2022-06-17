@@ -38,6 +38,7 @@ type QueryContext struct {
 	CustomAddress    string
 	ServicePortLabel string
 	Networks         structs.Networks
+	NetworkStatus    structs.NetworkStatus
 	Ports            structs.AllocatedPorts
 }
 
@@ -125,6 +126,7 @@ func address(qc *QueryContext, q *Query) (string, error) {
 	}
 	netlog.Cyan("ADDRESS q.PortLabel: %s, qc.ServicePortLabel: %s, label: %s", q.PortLabel, qc.ServicePortLabel, label)
 
+	status := qc.NetworkStatus.NetworkStatus()
 	addr, port, err := serviceregistration.GetAddress(
 		qc.CustomAddress, // custom address
 		mode,             // check address mode
@@ -132,7 +134,7 @@ func address(qc *QueryContext, q *Query) (string, error) {
 		qc.Networks,      // allocation networks
 		nil,              // driver network (not supported)
 		qc.Ports,         // ports
-		nil,              // network status
+		status,           // allocation network status
 	)
 	if err != nil {
 		netlog.Cyan("ADDRESS error: %s", err.Error())
