@@ -2,6 +2,7 @@ package nomad
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -63,6 +64,10 @@ func (sv *SecureVariables) Upsert(
 			mErr.Errors = append(mErr.Errors, err)
 			continue
 		}
+		if err := sv.handleCheckAndSet(v.Path, args.CheckIndex, args.WriteRequest); err != nil {
+			mErr.Errors = append(mErr.Errors, err)
+			continue
+		}
 		ev, err := sv.encrypt(v)
 		if err != nil {
 			mErr.Errors = append(mErr.Errors, err)
@@ -110,6 +115,10 @@ func (sv *SecureVariables) Delete(
 		if !aclObj.AllowNsOp(args.RequestNamespace(), acl.NamespaceCapabilitySubmitJob) {
 			return structs.ErrPermissionDenied
 		}
+	}
+
+	if err := sv.handleCheckAndSet(args.Path, args.CheckIndex, args.WriteRequest); err != nil {
+		return err
 	}
 
 	// Update via Raft.
@@ -465,6 +474,35 @@ func (sv *SecureVariables) authValidatePrefix(alloc *structs.Allocation, taskNam
 		if part != expect[idx] {
 			return structs.ErrPermissionDenied
 		}
+	}
+	return nil
+}
+
+func (sv *SecureVariables) handleCheckAndSet(path string, idx *uint64, wo structs.WriteRequest) error {
+	if idx == nil {
+		return nil
+	}
+	ci := *idx
+	var reply = new(structs.SecureVariablesReadResponse)
+	var rArgs = &structs.SecureVariablesReadRequest{
+		Path: path,
+		QueryOptions: structs.QueryOptions{
+			Region:    wo.Region,
+			AuthToken: wo.AuthToken,
+			Namespace: wo.Namespace,
+		},
+	}
+	sv.Read(rArgs, reply)
+
+	if reply.Data == nil {
+		if ci != 0 {
+			return errors.New("check-and-set error: cas index > 0 and no existing value found")
+		}
+		return nil
+	}
+
+	if reply.Data.ModifyIndex != ci {
+		return fmt.Errorf("check-and-set error: expected cas index %v; found index %v", ci, reply.Data.ModifyIndex)
 	}
 	return nil
 }
