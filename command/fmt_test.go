@@ -47,13 +47,29 @@ func TestFmt_unfomattedTemlateDirectory(t *testing.T) {
 }
 
 const (
-	unformattedHCL = `
-	ami_filter_name ="amzn2-ami-hvm-*-x86_64-gp2"
-ami_filter_owners =[ "137112412989" ]
+	unformattedHCL string = `
+variables {
+	var1 = "default-val"
+	var2 = "default-val"
+	var3 = "default-val"
+	var4 = "default-val"
+	}
+	
+	job "example" {
+	datacenters = ["${var.var1}", "${var.var2}", "${var.var3}", "${var.var4}"]
+	}
 `
-	formattedHCL = `
-	ami_filter_name   = "amzn2-ami-hvm-*-x86_64-gp2"
-ami_filter_owners = ["137112412989"]
+	formattedHCL string = `
+variables {
+	var1 = "default-val"
+	var2 = "default-val"
+	var3 = "default-val"
+	var4 = "default-val"
+}
+
+job "example" {
+	datacenters = ["${var.var1}", "${var.var2}", "${var.var3}", "${var.var4}"]
+}
 `
 )
 
@@ -240,7 +256,7 @@ func TestFmt_File(t *testing.T) {
 // 	}
 
 // 	for _, tc := range tc {
-// 		t.Run(fmt.Sprintf("echo %q | packer %s", tc.piped, tc.command), func(t *testing.T) {
+// 		t.Run(fmt.Sprintf("echo %q | nomad %s", tc.piped, tc.command), func(t *testing.T) {
 // 			Stdin = strings.NewReader(tc.piped)
 // 			bs, err := p.Output()
 // 			if err != nil {
@@ -288,6 +304,7 @@ func (fc fileCheck) verify(t *testing.T, dir string) {
 			t.Fatalf("ioutil.ReadFile: %v", err)
 		}
 		if diff := cmp.Diff(expectedContent, string(content)); diff != "" {
+			fmt.Printf(string(content))
 			t.Errorf("content of %s differs: %s", file, diff)
 		}
 	}
